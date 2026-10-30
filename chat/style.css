@@ -44,6 +44,7 @@ body {
   position: relative;
   padding: 14px 4px 6px;
   contain: layout style;
+  will-change: transform, opacity;
   animation: messageEnter 300ms ease;
 }
 

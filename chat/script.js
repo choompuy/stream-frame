@@ -54,8 +54,11 @@ const template = document.getElementById("message-template");
 
 const nodePool = [];
 
+// Arrivals are shown in batches: one layout and raster per message costs more at 20+ msg/s than a 100 ms step.
+const FLUSH_INTERVAL = 100;
+
 let messageQueue = [];
-let rafPending = false;
+let flushPending = false;
 
 window.addEventListener("onEventReceived", ({ detail }) => {
   const { listener, event } = detail;
@@ -89,20 +92,20 @@ window.addEventListener("onEventReceived", ({ detail }) => {
   } else if (listener === "delete-messages") {
     removeWhere("userId", event.userId);
     return;
-  } else if (listener === "widget-button") {
-    if (Object.hasOwn(TESTS, event.field)) TESTS[event.field]();
-    return;
   } else {
     return;
   }
 
-  if (!rafPending) {
-    rafPending = true;
-    requestAnimationFrame(flushQueue);
+  // Nothing older than the last MAX_MESSAGES can ever be shown, so the queue never grows past it.
+  if (messageQueue.length > MAX_MESSAGES) messageQueue.shift();
+
+  if (!flushPending) {
+    flushPending = true;
+    setTimeout(flushQueue, FLUSH_INTERVAL);
   }
 });
 
-// One predicate for flushed nodes (dataset) and items still waiting for the rAF flush,
+// One predicate for flushed nodes (dataset) and items still waiting for the flush,
 // so a delete can't race the flush. Events carry no ids and are never matched.
 function removeWhere(key, value) {
   if (!value) return;
@@ -115,11 +118,11 @@ function removeWhere(key, value) {
 }
 
 function flushQueue() {
-  rafPending = false;
+  flushPending = false;
 
-  // rAF is paused while the source is hidden: don't replay messages that already expired.
+  // Don't replay messages that already expired (e.g. timers were throttled while the source was hidden).
   const now = Date.now();
-  const items = messageQueue.filter((item) => now - item.receivedAt < MESSAGE_LIFETIME).slice(-MAX_MESSAGES);
+  const items = messageQueue.filter((item) => now - item.receivedAt < MESSAGE_LIFETIME);
   messageQueue = [];
 
   const fragment = document.createDocumentFragment();
