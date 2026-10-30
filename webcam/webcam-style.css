@@ -1,3 +1,9 @@
+/* pixel size of the base image: the stage keeps its proportions */
+:root {
+  --stage-w: 1448;
+  --stage-h: 1086;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -9,14 +15,22 @@ body {
   height: 100%;
   background: transparent;
   overflow: hidden;
+}
+
+body {
   display: grid;
   place-items: center;
 }
 
 .stage {
   position: relative;
-  width: min(100vw, calc(100vh * 1448 / 1086));
-  aspect-ratio: 1448 / 1086;
+  width: min(100vw, calc(100vh * var(--stage-w) / var(--stage-h)));
+  aspect-ratio: var(--stage-w) / var(--stage-h);
+  visibility: hidden;
+}
+
+.ready .stage {
+  visibility: visible;
 }
 
 .base {
@@ -33,7 +47,6 @@ body {
   height: auto;
   -webkit-user-drag: none;
   will-change: transform;
-  backface-visibility: hidden;
 }
 
 .hook {
@@ -84,4 +97,15 @@ body {
   100% {
     transform: translate(0, 0) rotate(6deg);
   }
+}
+
+/* the animations start together with the reveal, not while the images are still loading */
+.hook,
+.hand {
+  animation-play-state: paused;
+}
+
+.ready .hook,
+.ready .hand {
+  animation-play-state: running;
 }
