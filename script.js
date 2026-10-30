@@ -54,29 +54,37 @@ const ALLOWED_EVENTS = new Set(Object.keys(EVENT_TYPES));
 const chat = document.getElementById("chat");
 const template = document.getElementById("message-template");
 
-const _escapeDiv = document.createElement("div");
-const badgeCache = new Map();
 const nodePool = [];
 
 let messageQueue = [];
 let rafPending = false;
 
 window.addEventListener("onEventReceived", ({ detail }) => {
-  const { listener } = detail;
+  const { listener, event } = detail;
+
+  if (!event) return;
 
   if (listener === "message") {
-    const { data } = detail.event;
+    const { data } = event;
+    if (!data) return;
+
     const username = (data.nick || data.displayName || "").toLowerCase();
 
     if (USER_BLACKLIST.has(username)) return;
 
-    messageQueue.push({ listener, data });
+    messageQueue.push({ listener, data, receivedAt: Date.now() });
   } else if (listener === "event") {
-    const { data, type } = detail.event;
+    const { data, type } = event;
 
-    if (!ALLOWED_EVENTS.has(type)) return;
+    if (!data || !ALLOWED_EVENTS.has(type)) return;
 
-    messageQueue.push({ listener, data, type });
+    messageQueue.push({ listener, data, type, receivedAt: Date.now() });
+  } else if (listener === "delete-message") {
+    removeWhere("msgId", event.msgId);
+    return;
+  } else if (listener === "delete-messages") {
+    removeWhere("userId", event.userId);
+    return;
   } else {
     return;
   }
@@ -87,16 +95,29 @@ window.addEventListener("onEventReceived", ({ detail }) => {
   }
 });
 
+// One predicate for flushed nodes (dataset) and items still waiting for the rAF flush,
+// so a delete can't race the flush. Events carry no ids and are never matched.
+function removeWhere(key, value) {
+  if (!value) return;
+
+  messageQueue = messageQueue.filter((item) => item.listener !== "message" || item.data[key] !== value);
+
+  for (const node of [...chat.children]) {
+    if (node.dataset[key] === value) recycleNode(node);
+  }
+}
+
 function flushQueue() {
   rafPending = false;
 
-  if (messageQueue.length > MAX_MESSAGES) messageQueue = messageQueue.slice(-MAX_MESSAGES);
+  // rAF is paused while the source is hidden: don't replay messages that already expired.
+  const now = Date.now();
+  const items = messageQueue.filter((item) => now - item.receivedAt < MESSAGE_LIFETIME).slice(-MAX_MESSAGES);
+  messageQueue = [];
 
   const fragment = document.createDocumentFragment();
 
-  for (const item of messageQueue) fragment.appendChild(item.listener === "event" ? createEvent(item) : createMessage(item.data));
-
-  messageQueue = [];
+  for (const item of items) fragment.appendChild(item.listener === "event" ? createEvent(item) : createMessage(item.data));
 
   chat.appendChild(fragment);
 
@@ -127,12 +148,12 @@ function recycleNode(node) {
   const { username, usernameText, badges, text, eventText } = node._refs;
 
   node.className = node._baseClassName;
+  delete node.dataset.msgId;
+  delete node.dataset.userId;
   username.style.color = "";
   username.style.removeProperty("--user-color");
-  usernameText.innerHTML = "";
-  badges.innerHTML = "";
-  text.innerHTML = "";
-  eventText.innerHTML = "";
+
+  for (const el of [usernameText, badges, text, eventText]) el.replaceChildren();
 
   node.remove();
 
@@ -153,45 +174,40 @@ function setupRemoval(node) {
   }, MESSAGE_LIFETIME);
 }
 
-function escapeHtml(str) {
-  _escapeDiv.textContent = str;
-  return _escapeDiv.innerHTML;
+// Built with DOM APIs (no HTML strings), so nothing needs escaping.
+function renderBadges(badges = []) {
+  return badges
+    .filter((badge) => badge.url)
+    .map((badge) => {
+      const img = new Image();
+      img.alt = "";
+      img.src = badge.url;
+      return img;
+    });
 }
 
-function getBadges(badges) {
-  if (!badges?.length) return "";
+// Emotes are matched by name (like the default SE template), not by start/end:
+// no sorting, bounds or code point vs UTF-16 problems.
+function renderMessageContent(text = "", emotes = []) {
+  const byName = new Map(emotes.map((emote) => [emote.name, emote]));
+  const fragment = document.createDocumentFragment();
 
-  if (badgeCache.size >= 200) badgeCache.delete(badgeCache.keys().next().value);
+  for (const part of text.split(/(\s+)/)) {
+    const emote = byName.get(part);
+    const src = emote?.urls?.["2"] ?? emote?.urls?.["1"] ?? emote?.urls?.["4"];
 
-  let html = "";
-  for (const badge of badges) {
-    let img = badgeCache.get(badge.url);
-    if (!img) {
-      img = `<img class="chat-badge" src="${escapeHtml(badge.url)}" alt="">`;
-      badgeCache.set(badge.url, img);
+    if (src) {
+      const img = new Image();
+      img.className = "chat-emote";
+      img.alt = emote.name;
+      img.src = src;
+      fragment.append(img);
+    } else if (part) {
+      fragment.append(part);
     }
-    html += img;
-  }
-  return html;
-}
-
-function renderMessageContent(text, emotes = []) {
-  const validEmotes = emotes.filter((e) => Number.isInteger(e.start) && Number.isInteger(e.end) && e.end >= e.start);
-
-  if (!validEmotes.length) return escapeHtml(text);
-
-  let html = "";
-  let cursor = 0;
-
-  for (const emote of validEmotes) {
-    html += escapeHtml(text.slice(cursor, emote.start));
-    const src = emote.urls?.["1"] ?? emote.urls?.["2"] ?? emote.urls?.["4"] ?? "";
-    html += `<img class="chat-emote" src="${escapeHtml(src)}" alt="${escapeHtml(emote.name)}">`;
-    cursor = emote.end + 1;
   }
 
-  html += escapeHtml(text.slice(cursor));
-  return html;
+  return fragment;
 }
 
 function randomFrom(arr) {
@@ -211,9 +227,12 @@ function createMessage(data) {
   const node = getNode();
   const { badges, text, eventText } = node._refs;
 
+  if (data.msgId) node.dataset.msgId = data.msgId;
+  if (data.userId) node.dataset.userId = data.userId;
+
   applyUserStyle(node, data);
-  badges.innerHTML = getBadges(data.badges);
-  text.innerHTML = renderMessageContent(data.text, data.emotes);
+  badges.append(...renderBadges(data.badges));
+  text.append(renderMessageContent(data.text, data.emotes));
 
   if (data.tags?.["first-msg"] === "1") {
     node.classList.add("with-event");
