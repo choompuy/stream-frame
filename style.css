@@ -18,6 +18,11 @@
   --bookmark: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/bookmark.png");
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   overflow: hidden;
@@ -38,9 +43,8 @@ body {
 .message {
   position: relative;
   padding: 14px 4px 6px;
-  contain: layout style paint;
+  contain: layout style;
   animation: messageEnter 300ms ease;
-  transform-origin: top left;
 }
 
 .with-event {
@@ -130,7 +134,8 @@ body {
   display: flex;
   align-items: center;
   border-radius: inherit;
-  background: color-mix(in srgb, #000 100%, var(--user-color) 30%);
+  background: #000;
+  background: color-mix(in srgb, #000 77%, var(--user-color) 23%);
   font-weight: 700;
   overflow: hidden;
 }
@@ -154,7 +159,6 @@ body {
   padding: 4px 8px 4px 6px;
   text-overflow: ellipsis;
   text-shadow: 0 0 8px currentColor;
-  text-wrap: nowrap;
   white-space: nowrap;
   overflow: hidden;
 }

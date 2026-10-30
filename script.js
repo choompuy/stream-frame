@@ -1,55 +1,53 @@
-const MAX_MESSAGES = 10;
-const MESSAGE_LIFETIME = 15000;
 const DEFAULT_COLOR = "#fff";
+const FIRST_MESSAGE_LABEL = "first message";
 
-const USER_BLACKLIST = new Set(["streamelements", "nightbot", "moobot", "wizebot", "streamlabs", "jeetbot", "vsestream"]);
+let MAX_MESSAGES = 10;
+let MESSAGE_LIFETIME = 15000;
+let USER_BLACKLIST = new Set(["streamelements", "nightbot", "moobot", "wizebot", "streamlabs", "jeetbot", "vsestream"]);
 
-const EVENT_COLORS = {
-  follow: "#4cc9f0",
-  subscriber: "#f7b801",
-  raid: "#9b5de5",
+const EVENTS = {
+  follow: {
+    color: "#4cc9f0",
+    label: "new follow",
+    texts: [
+      "дарова, аннигилятор",
+      "добро пожаловать в убежище",
+      "проходи, не стесняйся",
+      "ещё один боец в строю",
+      "располагайся поудобнее",
+      "рады видеть на борту",
+      "залетай в движ",
+      "теперь ты один из нас",
+    ],
+  },
+  subscriber: {
+    color: "#f7b801",
+    label: "new sub",
+    texts: [
+      "добро пожаловать в элиту",
+      "уважение за поддержку",
+      "саб-комьюнити стало сильнее",
+      "легендарное решение",
+      "статус повышен",
+      "теперь с VIP-пропуском",
+      "официально в клубе",
+      "респект за подписку",
+    ],
+  },
+  raid: {
+    color: "#9b5de5",
+    label: "raid",
+    texts: [
+      "дарова, аннигиляторы",
+      "портал открыт",
+      "подкрепление прибыло",
+      "новый отряд на позиции",
+      "рейдеры замечены",
+      "десант успешно высадился",
+      "боевой отряд прибыл",
+    ],
+  },
 };
-
-const EVENT_TYPES = {
-  firstMessage: "first message",
-  follow: "new follow",
-  subscriber: "new sub",
-  raid: "raid",
-};
-
-const EVENT_TEXTS = {
-  follow: [
-    "дарова, аннигилятор",
-    "добро пожаловать в убежище",
-    "проходи, не стесняйся",
-    "ещё один боец в строю",
-    "располагайся поудобнее",
-    "рады видеть на борту",
-    "залетай в движ",
-    "теперь ты один из нас",
-  ],
-  subscriber: [
-    "добро пожаловать в элиту",
-    "уважение за поддержку",
-    "саб-комьюнити стало сильнее",
-    "легендарное решение",
-    "статус повышен",
-    "теперь с VIP-пропуском",
-    "официально в клубе",
-    "респект за подписку",
-  ],
-  raid: [
-    "дарова, аннигиляторы",
-    "портал открыт",
-    "подкрепление прибыло",
-    "новый отряд на позиции",
-    "рейдеры замечены",
-    "десант успешно высадился",
-    "боевой отряд прибыл",
-  ],
-};
-
-const ALLOWED_EVENTS = new Set(Object.keys(EVENT_TYPES));
 
 const chat = document.getElementById("chat");
 const template = document.getElementById("message-template");
@@ -64,6 +62,12 @@ window.addEventListener("onEventReceived", ({ detail }) => {
 
   if (!event) return;
 
+  // SE docs put "widget-button" in detail.listener, but real payloads carry it in detail.event.listener.
+  if (listener === "widget-button" || event.listener === "widget-button") {
+    if (Object.hasOwn(TESTS, event.field)) TESTS[event.field]();
+    return;
+  }
+
   if (listener === "message") {
     const { data } = event;
     if (!data) return;
@@ -76,7 +80,7 @@ window.addEventListener("onEventReceived", ({ detail }) => {
   } else if (listener === "event") {
     const { data, type } = event;
 
-    if (!data || !ALLOWED_EVENTS.has(type)) return;
+    if (!data || !Object.hasOwn(EVENTS, type)) return;
 
     messageQueue.push({ listener, data, type, receivedAt: Date.now() });
   } else if (listener === "delete-message") {
@@ -84,6 +88,9 @@ window.addEventListener("onEventReceived", ({ detail }) => {
     return;
   } else if (listener === "delete-messages") {
     removeWhere("userId", event.userId);
+    return;
+  } else if (listener === "widget-button") {
+    if (Object.hasOwn(TESTS, event.field)) TESTS[event.field]();
     return;
   } else {
     return;
@@ -161,16 +168,9 @@ function recycleNode(node) {
 }
 
 function setupRemoval(node) {
-  const token = (setupRemoval._counter = (setupRemoval._counter ?? 0) + 1);
-  node._removalToken = token;
-
   node._timeoutId = setTimeout(() => {
-    if (node._removalToken !== token) return;
     node.classList.add("message-removing");
-
-    node._exitTimeoutId = setTimeout(() => {
-      if (node.parentNode) recycleNode(node);
-    }, 300);
+    node._exitTimeoutId = setTimeout(() => recycleNode(node), 300);
   }, MESSAGE_LIFETIME);
 }
 
@@ -236,7 +236,7 @@ function createMessage(data) {
 
   if (data.tags?.["first-msg"] === "1") {
     node.classList.add("with-event");
-    eventText.textContent = EVENT_TYPES.firstMessage;
+    eventText.textContent = FIRST_MESSAGE_LABEL;
   }
 
   setupRemoval(node);
@@ -245,14 +245,60 @@ function createMessage(data) {
 
 function createEvent({ data, type }) {
   const node = getNode();
-  const { badges, text, eventText } = node._refs;
+  const { text, eventText } = node._refs;
+  const { color, label, texts } = EVENTS[type];
 
-  applyUserStyle(node, data, EVENT_COLORS[type]);
-  text.textContent = randomFrom(EVENT_TEXTS[type] ?? [""]);
+  applyUserStyle(node, data, color);
+  text.textContent = randomFrom(texts);
   node.classList.add("with-event");
 
-  eventText.textContent = type === "raid" ? `${EVENT_TYPES[type]} × ${data.amount}` : EVENT_TYPES[type];
+  eventText.textContent = type === "raid" ? `${label} × ${data.amount}` : label;
 
   setupRemoval(node);
   return node;
 }
+
+// Settings from Fields (edited in the SE panel instead of the code).
+window.addEventListener("onWidgetLoad", ({ detail }) => {
+  const fields = detail.fieldData;
+
+  MAX_MESSAGES = Number(fields.maxMessages) || MAX_MESSAGES;
+  MESSAGE_LIFETIME = (Number(fields.messageLifetime) || MESSAGE_LIFETIME / 1000) * 1000;
+
+  if (typeof fields.userBlacklist === "string") {
+    USER_BLACKLIST = new Set(
+      fields.userBlacklist
+        .split(",")
+        .map((name) => name.trim().toLowerCase())
+        .filter(Boolean)
+    );
+  }
+});
+
+// Test buttons (Fields: type "button"): emulate SE events right in the editor.
+let lastTestMsgId = null;
+
+function emulate(listener, event) {
+  window.dispatchEvent(new CustomEvent("onEventReceived", { detail: { listener, event } }));
+}
+
+const TESTS = {
+  testMessage: () => {
+    lastTestMsgId = `test-${Date.now()}`;
+    emulate("message", {
+      data: {
+        nick: "tester",
+        displayName: "Tester",
+        userId: "test-user",
+        msgId: lastTestMsgId,
+        text: "Test message",
+        emotes: [],
+        badges: [],
+        tags: {},
+      },
+    });
+  },
+  testDelete: () => emulate("delete-message", { msgId: lastTestMsgId }),
+  testFollow: () => emulate("event", { type: "follow", data: { displayName: "Tester" } }),
+  testRaid: () => emulate("event", { type: "raid", data: { displayName: "Tester", amount: 42 } }),
+};

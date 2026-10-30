@@ -1,0 +1,47 @@
+{
+  "maxMessages": {
+    "type": "slider",
+    "label": "Max messages",
+    "value": 10,
+    "min": 1,
+    "max": 30,
+    "step": 1
+  },
+  "messageLifetime": {
+    "type": "slider",
+    "label": "Message lifetime, sec",
+    "value": 15,
+    "min": 3,
+    "max": 120,
+    "step": 1
+  },
+  "userBlacklist": {
+    "type": "text",
+    "label": "Hidden users (comma separated)",
+    "value": "streamelements,nightbot,moobot,wizebot,streamlabs,jeetbot,vsestream"
+  },
+  "testMessage": {
+    "type": "button",
+    "label": "Test message",
+    "value": "test",
+    "group": "Test"
+  },
+  "testDelete": {
+    "type": "button",
+    "label": "Delete last test message",
+    "value": "test",
+    "group": "Test"
+  },
+  "testFollow": {
+    "type": "button",
+    "label": "Test follow",
+    "value": "test",
+    "group": "Test"
+  },
+  "testRaid": {
+    "type": "button",
+    "label": "Test raid",
+    "value": "test",
+    "group": "Test"
+  }
+}
