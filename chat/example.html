@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.streamelements.com/scripts/jquery_3.3.1.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <title>Document</title>
+  </head>
+
+  <body style="background-color: black">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=SN+Pro:wght@200..900&display=swap" rel="stylesheet" />
+    <div id="chat" style="width: 300px; height: 400px; margin-left: 100px; resize: horizontal"></div>
+    <div id="actions" style="margin-top: 100px">
+      <button data-action="message">Message</button>
+      <button data-action="long">Long message</button>
+      <button data-action="first">First message</button>
+      <button data-action="emotes">Emotes</button>
+      <button data-action="follow">Follow</button>
+      <button data-action="sub">Sub</button>
+      <button data-action="raid">Raid</button>
+      <button data-action="delete">Delete last</button>
+      <button data-action="ban">Ban last user</button>
+      <button data-action="clear">Clear chat</button>
+    </div>
+
+    <template id="message-template">
+      <div class="message">
+        <div class="username-wrapper">
+          <div class="username">
+            <span class="badges"></span>
+            <span class="username-text"></span>
+          </div>
+        </div>
+
+        <div class="message-panel">
+          <div class="text-wrapper">
+            <span class="text-top"></span>
+            <span class="text-bottom"></span>
+
+            <span class="text"></span>
+          </div>
+        </div>
+
+        <div class="event-wrapper">
+          <span class="event-text"></span>
+        </div>
+      </div>
+    </template>
+
+    <script src="script.js"></script>
+
+    <script>
+      const lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Laborum sed accusamus voluptates. Dolores, sit id?";
+      const loremLong =
+        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Adipisci harum impedit saepe nihil sit autem unde delectus assumenda, vero placeat voluptas, deleniti quibusdam culpa temporibus quisquam, consequatur blanditiis veritatis modi.";
+      const kappa = {
+        name: "Kappa",
+        urls: {
+          1: "https://static-cdn.jtvnw.net/emoticons/v1/25/1.0",
+          2: "https://static-cdn.jtvnw.net/emoticons/v1/25/2.0",
+          4: "https://static-cdn.jtvnw.net/emoticons/v1/25/4.0",
+        },
+      };
+
+      let lastMessage = null;
+      let counter = 0;
+
+      function fire(listener, event) {
+        window.dispatchEvent(new CustomEvent("onEventReceived", { detail: { listener, event } }));
+      }
+
+      function sendMessage(text, extra = {}) {
+        lastMessage = {
+          nick: "loremipsum",
+          displayName: "Loremipsum",
+          displayColor: "#FF7F50",
+          userId: "test-user",
+          msgId: `test-${++counter}`,
+          badges: [],
+          emotes: [],
+          tags: {},
+          text,
+          ...extra,
+        };
+        fire("message", { data: lastMessage });
+      }
+
+      const sendEvent = (type, data) => fire("event", { type, data: { displayName: "Loremipsum", ...data } });
+
+      // Same shapes as real SE events, so every overlay path can be checked here.
+      const actions = {
+        message: () => sendMessage(lorem),
+        long: () => sendMessage(loremLong),
+        first: () => sendMessage(lorem, { tags: { "first-msg": "1" } }),
+        emotes: () => sendMessage("Kappa hello Kappa", { emotes: [kappa] }),
+        follow: () => sendEvent("follow"),
+        sub: () => sendEvent("subscriber"),
+        raid: () => sendEvent("raid", { amount: 42 }),
+        delete: () => lastMessage && fire("delete-message", { msgId: lastMessage.msgId }),
+        ban: () => lastMessage && fire("delete-messages", { userId: lastMessage.userId }),
+        clear: () => document.getElementById("chat").replaceChildren(),
+      };
+
+      document.getElementById("actions").addEventListener("click", (e) => actions[e.target.dataset.action]?.());
+    </script>
+  </body>
+</html>

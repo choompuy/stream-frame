@@ -8,14 +8,14 @@
   --radius-user: 6px;
   --radius-message: 4px 4px 16px 16px;
 
-  --username-corner-top-left: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/username-corner-top-left.png");
-  --username-mask: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/username-mask.png");
-  --message-corner-top-right: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/message-corner-top-right.png");
-  --message-corner-bottom-left: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/message-corner-bottom-left.png");
-  --message-mask: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/message-mask.png");
-  --fog-top: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/fog-top.png");
-  --fog-bottom: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/fog-bottom.png");
-  --bookmark: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/assets/bookmark.png");
+  --username-corner-top-left: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/username-corner-top-left.png");
+  --username-mask: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/username-mask.png");
+  --message-corner-top-right: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/message-corner-top-right.png");
+  --message-corner-bottom-left: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/message-corner-bottom-left.png");
+  --message-mask: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/message-mask.png");
+  --fog-top: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/fog-top.png");
+  --fog-bottom: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/fog-bottom.png");
+  --bookmark: url("https://cdn.jsdelivr.net/gh/choompuy/twitch-custom-chat/chat/assets/bookmark.png");
 }
 
 html,
