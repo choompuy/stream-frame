@@ -54,6 +54,12 @@ const template = document.getElementById("message-template");
 
 const nodePool = [];
 
+// Lifetime and exit are a CSS animation: no timers to clear when a node is recycled.
+chat.style.setProperty("--lifetime", `${MESSAGE_LIFETIME}ms`);
+chat.addEventListener("animationend", (e) => {
+  if (e.animationName === "messageExit") recycleNode(e.target);
+});
+
 // Arrivals are shown in batches: one layout and raster per message costs more at 20+ msg/s than a 100 ms step.
 const FLUSH_INTERVAL = 100;
 
@@ -162,9 +168,6 @@ function getNode() {
 }
 
 function recycleNode(node) {
-  clearTimeout(node._timeoutId);
-  clearTimeout(node._exitTimeoutId);
-
   const { username, usernameText, badges, text, eventText } = node._refs;
 
   node.className = node._baseClassName;
@@ -178,13 +181,6 @@ function recycleNode(node) {
   node.remove();
 
   if (nodePool.length < MAX_MESSAGES) nodePool.push(node);
-}
-
-function setupRemoval(node) {
-  node._timeoutId = setTimeout(() => {
-    node.classList.add("message-removing");
-    node._exitTimeoutId = setTimeout(() => recycleNode(node), 300);
-  }, MESSAGE_LIFETIME);
 }
 
 // Built with DOM APIs (no HTML strings), so nothing needs escaping.
@@ -252,7 +248,6 @@ function createMessage(data) {
     eventText.textContent = FIRST_MESSAGE_LABEL;
   }
 
-  setupRemoval(node);
   return node;
 }
 
@@ -267,7 +262,6 @@ function createEvent({ data, type }) {
 
   eventText.textContent = type === "raid" ? `${label} × ${data.amount}` : label;
 
-  setupRemoval(node);
   return node;
 }
 
@@ -277,6 +271,7 @@ window.addEventListener("onWidgetLoad", ({ detail }) => {
 
   MAX_MESSAGES = Number(fields.maxMessages) || MAX_MESSAGES;
   MESSAGE_LIFETIME = (Number(fields.messageLifetime) || MESSAGE_LIFETIME / 1000) * 1000;
+  chat.style.setProperty("--lifetime", `${MESSAGE_LIFETIME}ms`);
 
   if (typeof fields.userBlacklist === "string") {
     USER_BLACKLIST = new Set(

@@ -45,10 +45,13 @@ body {
   padding: 14px 4px 6px;
   contain: layout style;
   will-change: transform, opacity;
+  animation: messageExit 300ms ease var(--lifetime, 15s) forwards;
 }
 
 .message-enter {
-  animation: messageEnter 300ms ease;
+  animation:
+    messageEnter 300ms ease,
+    messageExit 300ms ease var(--lifetime, 15s) forwards;
 }
 
 .with-event {
@@ -69,10 +72,6 @@ body {
     opacity: 1;
     transform: translateX(0);
   }
-}
-
-.message-removing {
-  animation: messageExit 300ms ease forwards;
 }
 
 @keyframes messageExit {
