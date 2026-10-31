@@ -57,6 +57,9 @@ const nodePool = [];
 // Arrivals are shown in batches: one layout and raster per message costs more at 20+ msg/s than a 100 ms step.
 const FLUSH_INTERVAL = 100;
 
+const ANIMATION_QUIET_MS = 300;
+let lastFlushAt = 0;
+
 let messageQueue = [];
 let flushPending = false;
 
@@ -125,9 +128,16 @@ function flushQueue() {
   const items = messageQueue.filter((item) => now - item.receivedAt < MESSAGE_LIFETIME);
   messageQueue = [];
 
+  const calm = now - lastFlushAt > ANIMATION_QUIET_MS;
+  if (items.length) lastFlushAt = now;
+
   const fragment = document.createDocumentFragment();
 
-  for (const item of items) fragment.appendChild(item.listener === "event" ? createEvent(item) : createMessage(item.data));
+  for (const item of items) {
+    const node = item.listener === "event" ? createEvent(item) : createMessage(item.data);
+    if (calm) node.classList.add("message-enter");
+    fragment.appendChild(node);
+  }
 
   chat.appendChild(fragment);
 
